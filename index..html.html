@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard CRM & Experiência do Hóspede</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --radius:16px;
+      --primary:#2563eb;
+      --ok:#16a34a;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:1200px;margin:26px auto;padding:0 18px 40px}
+    .topbar{
+      display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    h1{margin:0;font-size:30px;letter-spacing:-.02em}
+    .subtitle{margin-top:6px;color:var(--muted)}
+    .controls{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end
+    }
+    .ctrl{
+      background:var(--card); border:1px solid var(--line); border-radius:14px;
+      padding:10px 12px; box-shadow:var(--shadow);
+      display:flex; gap:10px; align-items:center;
+    }
+    label{font-size:12px;color:var(--muted)}
+    select, button{
+      border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+      font-size:14px; background:#fff; color:var(--text);
+      outline:none;
+    }
+    button{
+      background:linear-gradient(180deg,#fff, #f8fafc);
+      cursor:pointer;
+    }
+    button.primary{
+      border-color:rgba(37,99,235,.35);
+      background:linear-gradient(180deg, rgba(37,99,235,.12), rgba(37,99,235,.05));
+    }
+
+    .tabs{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin:14px 0 18px;
+    }
+    .tabbtn{
+      padding:10px 14px; border-radius:999px; border:1px solid var(--line);
+      background:var(--card); box-shadow:var(--shadow);
+      cursor:pointer; color:var(--muted);
+    }
+    .tabbtn.active{color:var(--text); border-color:rgba(37,99,235,.35); background:rgba(37,99,235,.06)}
+    .grid{
+      display:grid; gap:14px;
+    }
+    .kpis{grid-template-columns:repeat(4, minmax(0,1fr))}
+    @media (max-width:1000px){ .kpis{grid-template-columns:repeat(2, minmax(0,1fr))} }
+    @media (max-width:520px){ .kpis{grid-template-columns:1fr} }
+
+    .card{
+      background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:16px;
+    }
+    .kpi-title{font-size:12px;color:var(--muted);margin:0 0 6px}
+    .kpi-value{font-size:26px;margin:0;font-weight:750;letter-spacing:-.02em}
+    .kpi-sub{margin:6px 0 0;color:var(--muted);font-size:12px}
+
+    .two{grid-template-columns: 1.2fr .8fr}
+    @media (max-width:1000px){ .two{grid-template-columns:1fr} }
+
+    .three{grid-template-columns: 1fr 1fr 1fr}
+    @media (max-width:1000px){ .three{grid-template-columns:1fr} }
+
+    .card h2{
+      font-size:15px;margin:0 0 10px;color:var(--text)
+    }
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;
+      border:1px solid var(--line); background:#fff; color:var(--muted);
+      padding:6px 10px; border-radius:999px; font-size:12px;
+    }
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .muted{color:var(--muted);font-size:12px}
+    .hr{height:1px;background:var(--line);margin:12px 0}
+    .list{
+      display:flex;flex-direction:column;gap:10px;
+    }
+    .item{
+      border:1px solid var(--line); border-radius:14px; padding:12px; background:#fff;
+      display:flex; justify-content:space-between; gap:12px; align-items:flex-start;
+    }
+    .item .left{min-width:0}
+    .item .date{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .item .txt{margin:0;font-size:14px;line-height:1.35}
+    .badge{
+      font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid var(--line);
+      background:#fff; white-space:nowrap;
+    }
+    .b-ok{border-color:rgba(22,163,74,.35); background:rgba(22,163,74,.08); color:var(--ok)}
+    .b-warn{border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.10); color:var(--warn)}
+    .b-bad{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10); color:var(--bad)}
+
+    .hidden{display:none}
+    canvas{width:100% !important; height:320px !important;}
+    .small canvas{height:260px !important;}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <div>
+        <h1>Dashboard CRM & Experiência do Hóspede</h1>
+        <div class="subtitle">Mock em HTML (dados fictícios) • visão rápida para pousadas/hotéis</div>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl">
+          <div>
+            <label for="yearSel">Ano</label><br/>
+            <select id="yearSel">
+              <option value="2024">2024</option>
+              <option value="2025" selected>2025</option>
+            </select>
+          </div>
+          <div>
+            <label for="monthSel">Mês</label><br/>
+            <select id="monthSel">
+              <option value="Todos" selected>Todos</option>
+              <option value="Jan">Jan</option><option value="Fev">Fev</option><option value="Mar">Mar</option>
+              <option value="Abr">Abr</option><option value="Mai">Mai</option><option value="Jun">Jun</option>
+              <option value="Jul">Jul</option><option value="Ago">Ago</option><option value="Set">Set</option>
+              <option value="Out">Out</option><option value="Nov">Nov</option><option value="Dez">Dez</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <button id="regenBtn" class="primary">Gerar novos dados fictícios</button>
+            <button id="csvBtn">Baixar CSV (fictício)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tabbtn active" data-tab="tab1">1) Visão Geral</button>
+      <button class="tabbtn" data-tab="tab2">2) Experiência & Reputação</button>
+      <button class="tabbtn" data-tab="tab3">3) Fidelidade & CRM</button>
+    </div>
+
+    <!-- TAB 1 -->
+    <section id="tab1" class="tab">
+      <div class="grid kpis">
+        <div class="card">
+          <p class="kpi-title">Nota média (avaliações)</p>
+          <p id="kpiScore" class="kpi-value">—</p>
+          <p class="kpi-sub">média ponderada do período</p>
+        </div>
+        <div class="card">
+          <p class="kpi-title">NPS</p>
+          <p id="kpiNps" class="kpi-value">—</p>
+          <p class="kpi-sub">promotores - detratores</p>
+        </div>
+        <div class="card">
+          <p class="kpi-title">Volume de avaliações</p>
+          <p id="kpiReviews" class="kpi-value">—</p>
+          <p class="kpi-sub">Tripadvisor / Google / OTAs</p>
+        </div>
+        <div class="card">
+          <p class="kpi-title">Recorrência (hóspedes que voltaram)</p>
+          <p id="kpiRepeat" class="kpi-value">—</p>
+          <p class="kpi-sub">% do total de hóspedes</p>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:14px;">
+        <div class="card">
+          <div class="row">
+            <h2>Tendência mensal (nota média e NPS)</h2>
+            <span class="pill">visão executiva</span>
+          </div>
+          <canvas id="chartScoreNps"></canvas>
+        </div>
+
+        <div class="card small">
+          <div class="row">
+            <h2>Notas por departamento</h2>
+            <span class="pill">recepção • governança • café</span>
+          </div>
+          <canvas id="chartDept"></canvas>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:14px;">
+        <div class="card small">
+          <div class="row">
+            <h2>Volume por canal</h2>
+            <span class="pill">onde o hóspede avalia</span>
+          </div>
+          <canvas id="chartChannels"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <h2>Resumo do período</h2>
+            <span class="pill">insights</span>
+          </div>
+          <div class="hr"></div>
+          <div id="summaryBox" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2 -->
+    <section id="tab2" class="tab hidden">
+      <div class="grid two">
+        <div class="card">
+          <div class="row">
+            <h2>NPS (distribuição)</h2>
+            <span class="pill">promotores • neutros • detratores</span>
+          </div>
+          <canvas id="chartNpsDist"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <h2>Sentimento dos comentários</h2>
+            <span class="pill">positivo • neutro • negativo</span>
+          </div>
+          <canvas id="chartSent"></canvas>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:14px;">
+        <div class="card">
+          <div class="row">
+            <h2>Top temas (o que mais aparece)</h2>
+            <span class="pill">tendências</span>
+          </div>
+          <canvas id="chartThemes"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <h2>Comentários recentes (fictícios)</h2>
+            <span class="pill">amostra</span>
+          </div>
+          <div class="hr"></div>
+          <div id="commentsBox" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3 -->
+    <section id="tab3" class="tab hidden">
+      <div class="grid kpis">
+        <div class="card">
+          <p class="kpi-title">Ticket médio (R$)</p>
+          <p id="kpiSpend" class="kpi-value">—</p>
+          <p class="kpi-sub">gasto médio por estadia</p>
+        </div>
+        <div class="card">
+          <p class="kpi-title">CLV (estimado)</p>
+          <p id="kpiClv" class="kpi-value">—</p>
+          <p class="kpi-sub">valor de vida do hóspede</p>
+        </div>
+        <div class="card">
+          <p class="kpi-title">Frequência média</p>
+          <p id="kpiFreq" class="kpi-value">—</p>
+          <p class="kpi-sub">estadas/ano (média)</p>
+        </div>
+        <div class="card">
+          <p class="kpi-title">Cancelamento</p>
+          <p id="kpiCancel" class="kpi-value">—</p>
+          <p class="kpi-sub">% estimado no período</p>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:14px;">
+        <div class="card">
+          <div class="row">
+            <h2>Segmentação (RFM simples)</h2>
+            <span class="pill">VIP • Leais • Ocasionais • Em risco</span>
+          </div>
+          <canvas id="chartRfm"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <h2>Distribuição de CLV</h2>
+            <span class="pill">faixas</span>
+          </div>
+          <canvas id="chartClvDist"></canvas>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:14px;">
+        <div class="card">
+          <div class="row">
+            <h2>Retenção (coortes fictícias)</h2>
+            <span class="pill">retorno em 30/60/90 dias</span>
+          </div>
+          <canvas id="chartCohort"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <h2>Ações sugeridas (CRM)</h2>
+            <span class="pill">próximos passos</span>
+          </div>
+          <div class="hr"></div>
+          <div id="crmActions" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+<script>
+/* =========================
+   Helpers: RNG determinístico
+========================= */
+function mulberry32(seed){
+  return function(){
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+}
+function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+function pct(x){ return (Math.round(x*10)/10).toFixed(1) + "%"; }
+function brMoney(x){
+  return x.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+}
+const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+/* =========================
+   Gerador de dados fictícios
+========================= */
+function generateData(seed=42){
+  const rnd = mulberry32(seed);
+
+  // Base anual: 2024 e 2025 (12 pontos)
+  function series(base, amp){
+    return MONTHS.map((m, i) => {
+      // sazonalidade leve (picos em jan/jul/dez, vale em mar/abr/mai)
+      const season = Math.sin((i/12)*Math.PI*2 - 0.8) * amp;
+      const noise = (rnd()-0.5) * amp * 0.7;
+      return base + season + noise;
+    });
+  }
+
+  const score2024 = series(4.35, 0.25).map(v => clamp(v, 3.6, 4.9));
+  const score2025 = series(4.45, 0.25).map(v => clamp(v, 3.6, 4.9));
+
+  const nps2024 = series(52, 18).map(v => Math.round(clamp(v, 5, 85)));
+  const nps2025 = series(58, 18).map(v => Math.round(clamp(v, 5, 85)));
+
+  const reviews2024 = series(70, 30).map(v => Math.round(clamp(v, 10, 140)));
+  const reviews2025 = series(78, 30).map(v => Math.round(clamp(v, 10, 160)));
+
+  const dept = {
+    "Recepção": clamp(4.2 + (rnd()-0.5)*0.5, 3.7, 4.9),
+    "Governança": clamp(4.3 + (rnd()-0.5)*0.5, 3.7, 4.9),
+    "Café/Restaurante": clamp(4.1 + (rnd()-0.5)*0.6, 3.5, 4.9),
+    "Conforto/Quarto": clamp(4.25 + (rnd()-0.5)*0.5, 3.7, 4.9),
+  };
+
+  const channelVol = {
+    "Google": Math.round(180 + rnd()*120),
+    "Booking/OTA": Math.round(220 + rnd()*160),
+    "Tripadvisor": Math.round(60 + rnd()*60),
+    "Instagram/DM": Math.round(25 + rnd()*30),
+  };
+
+  const npsDist = {
+    promotores: Math.round(52 + rnd()*18),
+    neutros: Math.round(18 + rnd()*12),
+    detratores: 0
+  };
+  npsDist.detratores = 100 - npsDist.promotores - npsDist.neutros;
+
+  const sent = {
+    positivo: Math.round(62 + rnd()*18),
+    neutro: Math.round(18 + rnd()*12),
+    negativo: 0
+  };
+  sent.negativo = 100 - sent.positivo - sent.neutro;
+
+  const themes = {
+    "Atendimento": Math.round(90 + rnd()*70),
+    "Limpeza": Math.round(80 + rnd()*60),
+    "Localização": Math.round(70 + rnd()*55),
+    "Café da manhã": Math.round(65 + rnd()*55),
+    "Preço/benefício": Math.round(55 + rnd()*55),
+    "Wi-Fi": Math.round(35 + rnd()*35),
+  };
+
+  const repeatRate = clamp(0.22 + rnd()*0.14, 0.18, 0.45); // 18% a 45%
+  const spend = Math.round(520 + rnd()*380);             // ticket médio
+  const freq = clamp(1.2 + rnd()*0.9, 1.0, 2.6);         // estadas/ano
+  const clv = Math.round(spend * (1.8 + rnd()*1.7));     // simples: ticket * fator
+
+  const cancelRate = clamp(0.06 + rnd()*0.10, 0.03, 0.22);
+
+  const rfm = {
+    "VIP": Math.round(20 + rnd()*40),
+    "Leais": Math.round(60 + rnd()*80),
+    "Ocasionais": Math.round(140 + rnd()*140),
+    "Em risco": Math.round(50 + rnd()*90),
+  };
+
+  const clvDist = {
+    "Até R$800": Math.round(80 + rnd()*50),
+    "R$800–1.500": Math.round(140 + rnd()*70),
+    "R$1.500–2.500": Math.round(90 + rnd()*60),
+    "R$2.500+": Math.round(30 + rnd()*40),
+  };
+
+  const cohort = {
+    "Retorno em 30d": Math.round(12 + rnd()*10),
+    "Retorno em 60d": Math.round(18 + rnd()*12),
+    "Retorno em 90d": Math.round(24 + rnd()*14),
+  };
+
+  const comments = [
+    {txt:"Atendimento muito acolhedor e check-in rápido. Voltaria fácil!", tag:"positivo"},
+    {txt:"Quarto confortável, mas o Wi-Fi oscilou em alguns momentos.", tag:"neutro"},
+    {txt:"Café da manhã excelente e localização perfeita para caminhar.", tag:"positivo"},
+    {txt:"Tive um pequeno atraso na limpeza no 2º dia, mas resolveram rápido.", tag:"neutro"},
+    {txt:"Preço ok, mas esperava mais opções no café em dias cheios.", tag:"neutro"},
+  ].map(c => ({...c, day: Math.round(1+rnd()*27), month: MONTHS[Math.floor(rnd()*12)]}));
+
+  return {
+    y: {
+      "2024": {score:score2024, nps:nps2024, reviews:reviews2024},
+      "2025": {score:score2025, nps:nps2025, reviews:reviews2025},
+    },
+    dept, channelVol, npsDist, sent, themes,
+    repeatRate, spend, freq, clv, cancelRate, rfm, clvDist, cohort, comments
+  };
+}
+
+/* =========================
+   Estado + UI
+========================= */
+let SEED = 202501;
+let DATA = generateData(SEED);
+
+const yearSel = document.getElementById("yearSel");
+const monthSel = document.getElementById("monthSel");
+document.getElementById("regenBtn").addEventListener("click", () => {
+  SEED = Math.floor(Date.now()/1000) % 1000000;
+  DATA = generateData(SEED);
+  renderAll();
+});
+document.getElementById("csvBtn").addEventListener("click", () => downloadCsv());
+
+/* Tabs */
+document.querySelectorAll(".tabbtn").forEach(btn=>{
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const tabId = btn.dataset.tab;
+    document.querySelectorAll(".tab").forEach(t=>t.classList.add("hidden"));
+    document.getElementById(tabId).classList.remove("hidden");
+  });
+});
+
+/* =========================
+   Charts
+========================= */
+let charts = {};
+function destroyChart(key){
+  if(charts[key]){ charts[key].destroy(); charts[key]=null; }
+}
+
+function renderAll(){
+  const y = yearSel.value;
+  const m = monthSel.value;
+
+  // Para manter simples, o seletor de mês só “filtra” KPIs por um único ponto,
+  // e os gráficos ficam no ano completo (como visão executiva).
+  const idx = (m==="Todos") ? null : MONTHS.indexOf(m);
+
+  const scoreSeries = DATA.y[y].score;
+  const npsSeries = DATA.y[y].nps;
+  const reviewSeries = DATA.y[y].reviews;
+
+  const scoreKpi = (idx===null)
+    ? (scoreSeries.reduce((a,b)=>a+b,0)/scoreSeries.length)
+    : scoreSeries[idx];
+
+  const npsKpi = (idx===null)
+    ? Math.round(npsSeries.reduce((a,b)=>a+b,0)/npsSeries.length)
+    : npsSeries[idx];
+
+  const reviewsKpi = (idx===null)
+    ? reviewSeries.reduce((a,b)=>a+b,0)
+    : reviewSeries[idx];
+
+  // KPIs tab1
+  document.getElementById("kpiScore").textContent = scoreKpi.toFixed(2);
+  document.getElementById("kpiNps").textContent = npsKpi;
+  document.getElementById("kpiReviews").textContent = reviewsKpi.toLocaleString("pt-BR");
+  document.getElementById("kpiRepeat").textContent = pct(DATA.repeatRate*100);
+
+  // KPIs tab3
+  document.getElementById("kpiSpend").textContent = brMoney(DATA.spend);
+  document.getElementById("kpiClv").textContent = brMoney(DATA.clv);
+  document.getElementById("kpiFreq").textContent = DATA.freq.toFixed(1);
+  document.getElementById("kpiCancel").textContent = pct(DATA.cancelRate*100);
+
+  // Summary insights (bem direto e “pé no chão”)
+  const minScore = Math.min(...scoreSeries);
+  const maxScore = Math.max(...scoreSeries);
+  const minMonth = MONTHS[scoreSeries.indexOf(minScore)];
+  const maxMonth = MONTHS[scoreSeries.indexOf(maxScore)];
+
+  const summary = [
+    {txt:`Melhor mês em satisfação: ${maxMonth} (${maxScore.toFixed(2)}).`, badge:"ok"},
+    {txt:`Atenção em ${minMonth}: nota mais baixa do ano (${minScore.toFixed(2)}).`, badge:"warn"},
+    {txt:`Recorrência estimada: ${pct(DATA.repeatRate*100)} (oportunidade de CRM para elevar retorno).`, badge:"ok"},
+    {txt:`Canais dominantes: Booking/OTA e Google (ajuda a priorizar resposta a avaliações).`, badge:"warn"},
+  ];
+  const summaryBox = document.getElementById("summaryBox");
+  summaryBox.innerHTML = "";
+  summary.forEach(s => summaryBox.appendChild(makeInsightItem(s.txt, s.badge)));
+
+  // Comments
+  const commentsBox = document.getElementById("commentsBox");
+  commentsBox.innerHTML = "";
+  DATA.comments.slice(0,5).forEach(c => commentsBox.appendChild(makeCommentItem(c)));
+
+  // CRM Actions
+  const actions = [
+    {txt:"Criar campanha de retorno (cupom/meia-semana) para segmentos “Ocasionais” e “Em risco”.", badge:"ok"},
+    {txt:"Padronizar checklist de governança nos dias de maior volume (reduz risco de nota cair).", badge:"warn"},
+    {txt:"Responder 100% das avaliações OTA/Google em até 48h (impacta reputação e conversão).", badge:"ok"},
+    {txt:"Coletar NPS pós-estadia via WhatsApp (1 pergunta + motivo) para ganhar sinal rápido.", badge:"ok"},
+  ];
+  const crmActions = document.getElementById("crmActions");
+  crmActions.innerHTML = "";
+  actions.forEach(a => crmActions.appendChild(makeInsightItem(a.txt, a.badge)));
+
+  // Charts
+  // 1) Score + NPS line
+  destroyChart("scoreNps");
+  charts.scoreNps = new Chart(document.getElementById("chartScoreNps"), {
+    type:"line",
+    data:{
+      labels: MONTHS,
+      datasets:[
+        {label:"Nota média", data: scoreSeries.map(v=>+v.toFixed(2)), yAxisID:"y1", tension:.35, borderWidth:2, pointRadius:3},
+        {label:"NPS", data: npsSeries, yAxisID:"y2", tension:.35, borderWidth:2, pointRadius:3},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{position:"top"}},
+      scales:{
+        y1:{position:"left", min:3.5, max:5.0, grid:{color:"rgba(226,232,240,.9)"}},
+        y2:{position:"right", min:0, max:100, grid:{drawOnChartArea:false}}
+      }
+    }
+  });
+
+  // 2) Dept bar
+  destroyChart("dept");
+  charts.dept = new Chart(document.getElementById("chartDept"), {
+    type:"bar",
+    data:{
+      labels:Object.keys(DATA.dept),
+      datasets:[{label:"Nota (0–5)", data:Object.values(DATA.dept).map(v=>+v.toFixed(2)), borderWidth:1}]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{y:{min:3.0,max:5.0}}
+    }
+  });
+
+  // 3) Channels doughnut
+  destroyChart("channels");
+  charts.channels = new Chart(document.getElementById("chartChannels"), {
+    type:"doughnut",
+    data:{
+      labels:Object.keys(DATA.channelVol),
+      datasets:[{data:Object.values(DATA.channelVol)}]
+    },
+    options:{plugins:{legend:{position:"bottom"}}}
+  });
+
+  // Tab2 charts
+  destroyChart("npsDist");
+  charts.npsDist = new Chart(document.getElementById("chartNpsDist"), {
+    type:"bar",
+    data:{
+      labels:["Promotores","Neutros","Detratores"],
+      datasets:[{label:"%", data:[DATA.npsDist.promotores, DATA.npsDist.neutros, DATA.npsDist.detratores]}]
+    },
+    options:{scales:{y:{min:0,max:100}}, plugins:{legend:{display:false}}}
+  });
+
+  destroyChart("sent");
+  charts.sent = new Chart(document.getElementById("chartSent"), {
+    type:"bar",
+    data:{
+      labels:["Positivo","Neutro","Negativo"],
+      datasets:[{label:"%", data:[DATA.sent.positivo, DATA.sent.neutro, DATA.sent.negativo]}]
+    },
+    options:{scales:{y:{min:0,max:100}}, plugins:{legend:{display:false}}}
+  });
+
+  destroyChart("themes");
+  charts.themes = new Chart(document.getElementById("chartThemes"), {
+    type:"bar",
+    data:{
+      labels:Object.keys(DATA.themes),
+      datasets:[{label:"Menções", data:Object.values(DATA.themes)}]
+    },
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  // Tab3 charts
+  destroyChart("rfm");
+  charts.rfm = new Chart(document.getElementById("chartRfm"), {
+    type:"bar",
+    data:{
+      labels:Object.keys(DATA.rfm),
+      datasets:[{label:"Hóspedes", data:Object.values(DATA.rfm)}]
+    },
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  destroyChart("clvDist");
+  charts.clvDist = new Chart(document.getElementById("chartClvDist"), {
+    type:"bar",
+    data:{
+      labels:Object.keys(DATA.clvDist),
+      datasets:[{label:"Hóspedes", data:Object.values(DATA.clvDist)}]
+    },
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  destroyChart("cohort");
+  charts.cohort = new Chart(document.getElementById("chartCohort"), {
+    type:"bar",
+    data:{
+      labels:Object.keys(DATA.cohort),
+      datasets:[{label:"%", data:Object.values(DATA.cohort)}]
+    },
+    options:{scales:{y:{min:0,max:100}}, plugins:{legend:{display:false}}}
+  });
+}
+
+function makeInsightItem(text, badgeType){
+  const div = document.createElement("div");
+  div.className = "item";
+  const left = document.createElement("div");
+  left.className = "left";
+  const p = document.createElement("p");
+  p.className = "txt";
+  p.textContent = text;
+  left.appendChild(p);
+
+  const badge = document.createElement("span");
+  badge.className = "badge " + (badgeType==="ok"?"b-ok":badgeType==="bad"?"b-bad":"b-warn");
+  badge.textContent = (badgeType==="ok"?"OK":badgeType==="bad"?"Atenção":"Observação");
+
+  div.appendChild(left);
+  div.appendChild(badge);
+  return div;
+}
+
+function makeCommentItem(c){
+  const div = document.createElement("div");
+  div.className = "item";
+  const left = document.createElement("div");
+  left.className = "left";
+  const date = document.createElement("div");
+  date.className = "date";
+  date.textContent = `${c.day.toString().padStart(2,"0")}/${c.month} • feedback`;
+  const txt = document.createElement("p");
+  txt.className = "txt";
+  txt.textContent = c.txt;
+  left.appendChild(date);
+  left.appendChild(txt);
+
+  const badge = document.createElement("span");
+  badge.className = "badge " + (c.tag==="positivo"?"b-ok":c.tag==="negativo"?"b-bad":"b-warn");
+  badge.textContent = c.tag;
+
+  div.appendChild(left);
+  div.appendChild(badge);
+  return div;
+}
+
+/* =========================
+   CSV (fictício) para demo
+   Exporta um CSV mensal (ano selecionado)
+========================= */
+function downloadCsv(){
+  const y = yearSel.value;
+  const rows = [["ano","mes","nota_media","nps","avaliacoes"]];
+  for(let i=0;i<12;i++){
+    rows.push([
+      y,
+      MONTHS[i],
+      DATA.y[y].score[i].toFixed(2),
+      DATA.y[y].nps[i],
+      DATA.y[y].reviews[i]
+    ]);
+  }
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dados_crm_experiencia_${y}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* init */
+yearSel.addEventListener("change", renderAll);
+monthSel.addEventListener("change", renderAll);
+renderAll();
+</script>
+</body>
+</html>
